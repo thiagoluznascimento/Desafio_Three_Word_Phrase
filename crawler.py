@@ -1,4 +1,5 @@
-# import os
+import hashlib
+import os
 
 import requests
 from bs4 import BeautifulSoup
@@ -15,8 +16,9 @@ class BucadorTHREEWORDPHRASE:
         pagina_resultado_busca = self._busca_imagens()
         archive_imagens = self._parser_slug_archive(pagina_resultado_busca)
         slugs_imgens = self._obtem_slugs_imagens(archive_imagens)
-        imagens = self._parse_slug_imagens(slugs_imgens)
-        print(imagens)
+        url_imagens = self._parse_slug_imagens(slugs_imgens)
+        url_gif_list = self._obtem_url_gif(url_imagens)
+        self._baixa_arquivos_gif(url_gif_list)
 
     def _busca_imagens(self):
         '''
@@ -52,6 +54,35 @@ class BucadorTHREEWORDPHRASE:
             if url:
                 listas_slugs.append(url)
         return listas_slugs
+
+    def _obtem_url_gif(self, url_imagens):
+        urls = url_imagens
+        listas_url = []
+        for i in range(len(urls)):
+            urls[i] = urls[i].replace('.htm', '.gif')
+        for url in urls:
+            if url:
+                listas_url.append(url)
+        return listas_url
+
+    def _baixa_arquivos_gif(self, url_gif_list):
+        if not os.path.exists('imagens_gif'):
+            os.makedirs('imagens_gif')
+        caminho_arquivo = os.path.join('imagens_gif')
+        for i, url_gif in enumerate(url_gif_list):
+            # import pdb; pdb.set_trace()
+            response = requests.get(url_gif)
+            if response.status_code == 200:
+                nome_arquivo = self._obtem_md5(response.content) + ".gif"
+                with open(caminho_arquivo + "/" + nome_arquivo, 'wb') as f:
+                    f.write(response.content)
+                    print(f'Imagem {nome_arquivo} salva com sucesso!')
+            else:
+                print(f'Erro ao baixar a imagem {i+1} da URL: {url_gif}, Status Code: {response.status_code}')
+
+    def _obtem_md5(self, conteudo_imagem):
+        md5_hash = hashlib.md5(conteudo_imagem).hexdigest()
+        return md5_hash
 
 
 if __name__ == "__main__":
