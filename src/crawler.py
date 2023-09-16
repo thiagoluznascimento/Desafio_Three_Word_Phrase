@@ -83,9 +83,3 @@ class BucadorTHREEWORDPHRASE:
     def _obtem_md5(self, conteudo_imagem):
         md5_hash = hashlib.md5(conteudo_imagem).hexdigest()
         return md5_hash
-
-
-if __name__ == "__main__":
-
-    crawler = BucadorTHREEWORDPHRASE('URL_BUSCA')
-    crawler.baixa_imagens()
