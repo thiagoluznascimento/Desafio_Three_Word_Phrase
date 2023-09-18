@@ -48,7 +48,8 @@ class BucadorTHREEWORDPHRASE:
     def _parse_slug_imagens(self, slugs_imgens):
         listas_slugs = []
         soup = BeautifulSoup(slugs_imgens, 'html.parser')
-        for link in soup.find_all('a'):
+        spans_links = soup.select('span.links a')
+        for link in spans_links:
             slug = link.get('href')
             url = self.URL_BUSCA + slug
             if url:
@@ -70,7 +71,6 @@ class BucadorTHREEWORDPHRASE:
             os.makedirs('imagens_gif')
         caminho_arquivo = os.path.join('imagens_gif')
         for i, url_gif in enumerate(url_gif_list):
-            # import pdb; pdb.set_trace()
             response = requests.get(url_gif)
             if response.status_code == 200:
                 nome_arquivo = self._obtem_md5(response.content) + ".gif"
