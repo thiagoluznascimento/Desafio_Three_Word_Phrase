@@ -1,3 +1,5 @@
+import logging
+
 import hashlib
 import os
 
@@ -9,6 +11,8 @@ class BucadorTHREEWORDPHRASE:
 
     URL_BUSCA = "http://threewordphrase.com/"
 
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
     def __init__(self, URL_BUSCA):
         self.url = URL_BUSCA
 
@@ -19,16 +23,18 @@ class BucadorTHREEWORDPHRASE:
         url_imagens = self._parse_slug_imagens(slugs_imgens)
         url_gif_list = self._obtem_url_gif(url_imagens)
         self._baixa_arquivos_gif(url_gif_list)
+        logging.info("Finalização do downloader das imagens!")
 
     def _busca_imagens(self):
         '''
         Faz a requisição e retorna o resultado html em text
         '''
-        response = requests.get(self.URL_BUSCA)
-        # if response.status_code == 200:
-        #     print("Sucess")
-        # else:
-        #     print("Falha ao obter html")
+        try:
+            response = requests.get(self.URL_BUSCA)
+            response.raise_for_status() # Verifica erros HTTP
+            logging.info("Iníciando buscas das imagens..")
+        except Exception as e:
+            logging.error(f'Ao buscar imagem - Erro: {str(e)}')
         return response.text
 
     def _parser_slug_archive(self, pagina_resultado_busca):
@@ -71,14 +77,15 @@ class BucadorTHREEWORDPHRASE:
             os.makedirs('imagens_gif')
         caminho_arquivo = os.path.join('imagens_gif')
         for i, url_gif in enumerate(url_gif_list):
-            response = requests.get(url_gif)
-            if response.status_code == 200:
+            try:
+                response = requests.get(url_gif)
+                response.raise_for_status()
                 nome_arquivo = self._obtem_md5(response.content) + ".gif"
                 with open(caminho_arquivo + "/" + nome_arquivo, 'wb') as f:
                     f.write(response.content)
-                    print(f'Imagem {nome_arquivo} salva com sucesso!')
-            else:
-                print(f'Erro ao baixar a imagem {i+1} da URL: {url_gif}, Status Code: {response.status_code}')
+                    logging.info(f'Imagem com Hash-MD5: {nome_arquivo} salva com sucesso!')
+            except Exception as e:
+                logging.error(f'Ao baixar imagem - Erro: {str(e)}')
 
     def _obtem_md5(self, conteudo_imagem):
         md5_hash = hashlib.md5(conteudo_imagem).hexdigest()
