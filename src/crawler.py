@@ -18,17 +18,17 @@ class BucadorTHREEWORDPHRASE:
     def baixa_imagens(self):
         pagina_resultado_busca = self._busca_imagens()
         pagina_archive_imagens = self._parser_slug_archive(pagina_resultado_busca)
-        pagina_resultado_busca_archive = self._obtem_slugs_archive(pagina_archive_imagens)
-        url_imagens = self._parse_slug_imagens(pagina_resultado_busca_archive)
+        paginas_resultado_busca_archive = self._obtem_slugs_archive(pagina_archive_imagens)
+        url_imagens = self._parse_slug_imagens(paginas_resultado_busca_archive)
         listas_paginas_imagens = self._obtem_paginas_imagens(url_imagens)
-        resultado_slugs_imgs = self._obtem_slugs_imagens(listas_paginas_imagens)
+        resultado_slugs_imgs = self._extrai_link_imagens(listas_paginas_imagens)
         links_imagens = self._parser_slugs_imagens(resultado_slugs_imgs)
         self._baixa_arquivos_gif(links_imagens)
-        logging.info("Finalização do downloader das imagens!")
+        logging.info("Finalização do download das imagens!")
 
     def _busca_imagens(self):
         '''
-        Faz a requisição e retorna o resultado html em text da primeira pág  
+        Faz a requisição e retorna o resultado html em text da primeira página
         '''
         try:
             response = requests.get(self.URL_BUSCA)
@@ -54,13 +54,18 @@ class BucadorTHREEWORDPHRASE:
         '''
         Faz a requisição e retorna a pág archive_imagens html em text
         '''
-        response = requests.get(pagina_archive_imagens)
+        try:
+            response = requests.get(pagina_archive_imagens)
+            response.raise_for_status()
+            logging.info("Requisitando página archive..")
+        except Exception as e:
+            logging.error(f'Ao requsitar archive - Erro: {str(e)}')
 
         return response.text
 
-    def _parse_slug_imagens(self, pagina_resultado_busca_archive):
+    def _parse_slug_imagens(self, paginas_resultado_busca_archive):
         listas_slugs = []
-        soup = BeautifulSoup(pagina_resultado_busca_archive, 'html.parser')
+        soup = BeautifulSoup(paginas_resultado_busca_archive, 'html.parser')
         spans_links = soup.select('span.links a')
         for link in spans_links:
             slug = link.get('href')
@@ -83,7 +88,7 @@ class BucadorTHREEWORDPHRASE:
 
         return lista_paginas
 
-    def _obtem_slugs_imagens(self, listas_paginas_imagens):
+    def _extrai_link_imagens(self, listas_paginas_imagens):
         listas_img_tag = []
         for pagina in listas_paginas_imagens:
             soup = BeautifulSoup(pagina, 'html.parser')
@@ -109,7 +114,7 @@ class BucadorTHREEWORDPHRASE:
         if not os.path.exists('imagens_gif'):
             os.makedirs('imagens_gif')
             logging.info('Pasta criada com sucesso!')
-
+        logging.info("Iníciando download das imagens..")
         caminho_arquivo = os.path.join('imagens_gif')
         for url_gif in links_imagens:
             try:
