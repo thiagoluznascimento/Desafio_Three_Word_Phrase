@@ -18,11 +18,12 @@ class BucadorTHREEWORDPHRASE:
     def baixa_imagens(self):
         pagina_resultado_busca = self._busca_imagens()
         link_archive_imagens = self._parser_slug_archive(pagina_resultado_busca)
-        paginas_resultado_busca_archive = self._obtem_slugs_archive(link_archive_imagens)
-        url_imagens = self._parse_slug_imagens(paginas_resultado_busca_archive)
-        listas_paginas_imagens = self._obtem_paginas_imagens(url_imagens)
-        resultado_slugs_imgs = self._extrai_link_imagens(listas_paginas_imagens)
-        links_imagens = self._parser_slugs_imagens(resultado_slugs_imgs)
+        pagina_resultado_busca_archive = self._obtem_html_archive(link_archive_imagens)
+        urls_imagens = self._extrai_url_imagens(pagina_resultado_busca_archive)
+        listas_paginas_imagens = self._obtem_paginas_imagens(urls_imagens)
+        resultado_nomes_imagens = self._extrai_link_imagens(listas_paginas_imagens)
+        import pdb; pdb.set_trace()
+        links_imagens = self._parser_nomes_imagens(resultado_nomes_imagens)
         self._baixa_arquivos_gif(links_imagens)
         logging.info("Finalização do download das imagens!")
 
@@ -41,7 +42,7 @@ class BucadorTHREEWORDPHRASE:
 
     def _parser_slug_archive(self, pagina_resultado_busca):
         '''
-        Parsea o arquivo etorna o link archive que contém os outros links das imgs
+        Parsea pagina_resultado_busca etorna o link archive que contém os outros links das imgs
         '''
         soup = BeautifulSoup(pagina_resultado_busca, 'html.parser')
         link = soup.find(href="/archive.htm")
@@ -50,7 +51,7 @@ class BucadorTHREEWORDPHRASE:
 
         return url_archive
 
-    def _obtem_slugs_archive(self, link_archive_imagens):
+    def _obtem_html_archive(self, link_archive_imagens):
         '''
         Faz a requisição e retorna a pág archive_imagens html em text
         '''
@@ -64,21 +65,27 @@ class BucadorTHREEWORDPHRASE:
 
         return response.text
 
-    def _parse_slug_imagens(self, paginas_resultado_busca_archive):
-        listas_slugs = []
-        soup = BeautifulSoup(paginas_resultado_busca_archive, 'html.parser')
+    def _extrai_url_imagens(self, pagina_resultado_busca_archive):
+        '''
+        Parsea pagina_resultado_busca_archive e retorna a lista de urls que contém o html de cada imagem
+        '''
+        lista_urls = []
+        soup = BeautifulSoup(pagina_resultado_busca_archive, 'html.parser')
         spans_links = soup.select('span.links a')
         for link in spans_links:
             slug = link.get('href')
             url = self.URL_BUSCA + slug
             if url:
-                listas_slugs.append(url)
+                lista_urls.append(url)
 
-        return listas_slugs
+        return lista_urls
 
-    def _obtem_paginas_imagens(self, url_imagens):
+    def _obtem_paginas_imagens(self, urls_imagens):
+        '''
+        Parsea urls_imagens e retorna a lista de paginas html
+        '''
         lista_paginas = []
-        for url in url_imagens:
+        for url in urls_imagens:
             try:
                 response = requests.get(url)
                 response.raise_for_status()
@@ -90,6 +97,9 @@ class BucadorTHREEWORDPHRASE:
         return lista_paginas
 
     def _extrai_link_imagens(self, listas_paginas_imagens):
+        '''
+        Parsea listas_paginas_imagens e retorna uma lista de nomes de cada imagem.gif
+        '''
         listas_img_tag = []
         for pagina in listas_paginas_imagens:
             soup = BeautifulSoup(pagina, 'html.parser')
@@ -103,9 +113,12 @@ class BucadorTHREEWORDPHRASE:
 
         return listas_img_tag
 
-    def _parser_slugs_imagens(self, resultado_slugs_imgs):
+    def _parser_nomes_imagens(self, resultado_nomes_imagens):
+        '''
+        Parsea a lista resultado_nomes_imagens que contém os nomes das imagens e retorna lista_links das imagens
+        '''
         lista_links = []
-        for slug_img in resultado_slugs_imgs:
+        for slug_img in resultado_nomes_imagens:
             lista_link = self.URL_BUSCA + slug_img
             lista_links.append(lista_link)
 
