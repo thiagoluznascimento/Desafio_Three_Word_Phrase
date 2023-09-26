@@ -10,7 +10,7 @@ class TestBucadorTHREEWORDPHRASE(TestCase):
     def setUp(self):
         self.instancia_crawler = BucadorTHREEWORDPHRASE('URL_BUSCA')
         self.url = "http://threewordphrase.com/"
-        self.link = "http://threewordphrase.com//archive.htm"
+        self.link_archive = "http://threewordphrase.com//archive.htm"
 
         with open('./tests/fixtures/resultado_da_busca.html') as arquivo:
             self.pagina_resultado_busca = arquivo.read()
@@ -24,12 +24,14 @@ class TestBucadorTHREEWORDPHRASE(TestCase):
             mock_get.assert_called_once_with(self.url)
 
     def test_parser_slug_archive(self):
-        link_esperado = self.link
+        link_esperado = self.link_archive
         link_obtido = self.instancia_crawler._parser_slug_archive(self.pagina_resultado_busca)
         self.assertEqual(link_esperado, link_obtido)
 
     def test_obtem_slugs_archive(self):
-        with patch('requests.get', return_value=Mock(textt=self.pagina_resultado_busca_archive)) as mock_get:
-            html_obtido = self.instancia_crawler._obtem_slugs_archive(self.link)
+        link_archive_imagens = "http://threewordphrase.com//archive.htm"
+        with patch('requests.get', return_value=Mock(text=self.pagina_resultado_busca_archive)) as mock_get:
+            html_obtido = self.instancia_crawler._obtem_slugs_archive(link_archive_imagens)
+            import pdb; pdb.set_trace()
             self.assertEqual(self.pagina_resultado_busca_archive, html_obtido, "Pagina diferente da esperada.")
-            mock_get.assert_called_once_with(self.url)
+            mock_get.assert_called_once_with(self.link_archive)
