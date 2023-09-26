@@ -17,8 +17,8 @@ class BucadorTHREEWORDPHRASE:
 
     def baixa_imagens(self):
         pagina_resultado_busca = self._busca_imagens()
-        pagina_archive_imagens = self._parser_slug_archive(pagina_resultado_busca)
-        paginas_resultado_busca_archive = self._obtem_slugs_archive(pagina_archive_imagens)
+        link_archive_imagens = self._parser_slug_archive(pagina_resultado_busca)
+        paginas_resultado_busca_archive = self._obtem_slugs_archive(link_archive_imagens)
         url_imagens = self._parse_slug_imagens(paginas_resultado_busca_archive)
         listas_paginas_imagens = self._obtem_paginas_imagens(url_imagens)
         resultado_slugs_imgs = self._extrai_link_imagens(listas_paginas_imagens)
@@ -41,7 +41,7 @@ class BucadorTHREEWORDPHRASE:
 
     def _parser_slug_archive(self, pagina_resultado_busca):
         '''
-        Obtem e retorna o link archive que contém os outros links das imgs
+        Parsea o arquivo etorna o link archive que contém os outros links das imgs
         '''
         soup = BeautifulSoup(pagina_resultado_busca, 'html.parser')
         link = soup.find(href="/archive.htm")
@@ -50,13 +50,14 @@ class BucadorTHREEWORDPHRASE:
 
         return url_archive
 
-    def _obtem_slugs_archive(self, pagina_archive_imagens):
+    def _obtem_slugs_archive(self, link_archive_imagens):
         '''
         Faz a requisição e retorna a pág archive_imagens html em text
         '''
         try:
-            response = requests.get(pagina_archive_imagens)
+            response = requests.get(link_archive_imagens)
             response.raise_for_status()
+            # import pdb; pdb.set_trace()
             logging.info("Requisitando página archive..")
         except Exception as e:
             logging.error(f'Ao requsitar archive - Erro: {str(e)}')
