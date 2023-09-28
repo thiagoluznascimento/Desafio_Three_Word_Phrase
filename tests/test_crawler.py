@@ -1,7 +1,10 @@
 from unittest.mock import patch, Mock
 from unittest import TestCase
-# import os
 
+import hashlib
+import os
+
+import requests
 from src.crawler import BucadorTHREEWORDPHRASE
 
 
@@ -11,12 +14,10 @@ class TestBucadorTHREEWORDPHRASE(TestCase):
         self.instancia_crawler = BucadorTHREEWORDPHRASE('URL_BUSCA')
         self.url = "http://threewordphrase.com/"
         self.link_archive = "http://threewordphrase.com//archive.htm"
-
         with open('./tests/fixtures/resultado_da_busca.html') as arquivo:
             self.pagina_resultado_busca = arquivo.read()
         with open('./tests/fixtures/resultado_busca_archive.html') as arquivo:
             self.pagina_resultado_busca_archive = arquivo.read()
-
         self.lista_urls = [
             'http://threewordphrase.com//fatdog.htm', 'http://threewordphrase.com//gottabegood.htm',
             'http://threewordphrase.com//dogs.htm', 'http://threewordphrase.com//fivebro.htm',
@@ -25,6 +26,10 @@ class TestBucadorTHREEWORDPHRASE(TestCase):
         ]
         # self.urls_imagens = self.instancia_crawler._extrai_url_imagens(self.pagina_resultado_busca_archive)test_obtem_paginas_imagens
         self.htmls = self.instancia_crawler._obtem_paginas_imagens(self.lista_urls)
+        self.nomes_imagens = self.instancia_crawler._extrai_link_imagens(self.htmls)
+        self.links_imagens = self.instancia_crawler._parser_nomes_imagens(self.nomes_imagens)
+        # import pdb; pdb.set_trace()
+        # self.nome_arquivo_esperado = self.instancia_crawler._obtem_md5(requests.get(link).content) + ".gif"
 
     def test_busca_imagens(self):
         with patch('requests.get', return_value=Mock(text=self.pagina_resultado_busca)) as mock_get:
@@ -62,12 +67,37 @@ class TestBucadorTHREEWORDPHRASE(TestCase):
 
     def test_extrai_link_imagens(self):
         nomes_imagens = self.instancia_crawler._extrai_link_imagens(self.htmls)
-        # import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         for nome in nomes_imagens:
             self.assertIsInstance(nomes_imagens, list)
             self.assertEqual(len(nomes_imagens), len(self.htmls))
             self.assertIsInstance(nome, str)
 
     def test_parser_nomes_imagens(self):
-        pass
-        
+        links_imagens = self.instancia_crawler._parser_nomes_imagens(self.nomes_imagens)
+        for link in links_imagens:
+            self.assertIsInstance(links_imagens, list)
+            self.assertEqual(len(links_imagens), len(self.nomes_imagens))
+            self.assertIsInstance(link, str)
+
+    def test_obtem_md5(self):
+        conteudo_imagem = b'conteudo_de_imagem_de_teste'
+        hash_obtido = self.instancia_crawler._obtem_md5(conteudo_imagem)
+        md5_manual = hashlib.md5(conteudo_imagem).hexdigest()
+        self.assertEqual(hash_obtido, md5_manual)
+
+    def test_baixa_arquivos_gif(self):
+        self.instancia_crawler._baixa_arquivos_gif(self.links_imagens)
+        self.assertTrue(os.path.exists('imagens_gif'))
+        for link in self.links_imagens:
+            nome_arquivo_esperado = self.instancia_crawler._obtem_md5(requests.get(link).content) + ".gif"
+            caminho_completo = os.path.join('imagens_gif', nome_arquivo_esperado)
+            self.assertTrue(os.path.exists(caminho_completo))
+
+    def tearDown(self):
+        if os.path.exists('imagens_gif'):
+
+            for imagem in os.listdir('imagens_gif'):
+                caminho_com_arquivos = os.path.join('imagens', imagem)
+                os.remove(caminho_com_arquivos)
+        os.rmdir('imagens_gif')

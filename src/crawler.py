@@ -22,7 +22,6 @@ class BucadorTHREEWORDPHRASE:
         urls_imagens = self._extrai_url_imagens(pagina_resultado_busca_archive)
         listas_paginas_imagens = self._obtem_paginas_imagens(urls_imagens)
         resultado_nomes_imagens = self._extrai_link_imagens(listas_paginas_imagens)
-        import pdb; pdb.set_trace()
         links_imagens = self._parser_nomes_imagens(resultado_nomes_imagens)
         self._baixa_arquivos_gif(links_imagens)
         logging.info("Finalização do download das imagens!")
