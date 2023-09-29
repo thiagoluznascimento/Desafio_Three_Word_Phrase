@@ -1,6 +1,7 @@
 import logging
 import hashlib
 import os
+import re
 
 import requests
 from bs4 import BeautifulSoup
@@ -19,9 +20,8 @@ class BucadorTHREEWORDPHRASE:
         link_archive_imagens = self._parser_slug_archive(pagina_resultado_busca)
         pagina_resultado_busca_archive = self._obtem_html_archive(link_archive_imagens)
         urls_imagens = self._extrai_url_imagens(pagina_resultado_busca_archive)
-        listas_paginas_imagens = self._obtem_paginas_imagens(urls_imagens)
-        resultado_nomes_imagens = self._extrai_nome_imagens(listas_paginas_imagens)
-        # import pdb; pdb.set_trace()
+        lista_paginas_imagens = self._obtem_paginas_imagens(urls_imagens)
+        resultado_nomes_imagens = self._extrai_nome_imagens(lista_paginas_imagens)
         links_imagens = self._parser_nomes_imagens(resultado_nomes_imagens)
         self._baixa_arquivos_gif(links_imagens)
         logging.info("Finalização do download das imagens!")
@@ -95,22 +95,16 @@ class BucadorTHREEWORDPHRASE:
 
         return lista_paginas
 
-    def _extrai_nome_imagens(self, listas_paginas_imagens):
+    def _extrai_nome_imagens(self, lista_paginas_imagens):
         '''
-        Parsea listas_paginas_imagens e retorna uma lista de nomes de cada imagem.gif
+        Parsea lista_paginas_imagens e retorna uma lista de nomes de cada imagem.gif
         '''
         listas_img_tag = []
-        for pagina in listas_paginas_imagens:
-            soup = BeautifulSoup(pagina, 'html.parser')
-            tabela = soup.find('table', {'width': '403', 'border': '0'})
-            if tabela:
-                imagens = tabela.find_all('img')
-                for imagem in imagens:
-                    src = imagem.get('src')
-                    if src:
-                        listas_img_tag.append(src)
+        for pagina in lista_paginas_imagens:
+            # Usei um negative lookahead porque existia somente uma página que estava retorando a imagem /nextlink.jpg
+            img_src_values = re.findall(r' *(?:<td width=\"\d+\">| +)<img *src=\"(?!/nextlink)(.*?\.[a-z]{3} *)\"', pagina)
+            listas_img_tag.extend(img_src_values)
 
-            # import pdb; pdb.set_trace()
         return listas_img_tag
 
     def _parser_nomes_imagens(self, resultado_nomes_imagens):
@@ -119,8 +113,11 @@ class BucadorTHREEWORDPHRASE:
         '''
         lista_links = []
         for nome_img in resultado_nomes_imagens:
-            lista_link = self.URL_BUSCA + nome_img
-            lista_links.append(lista_link)
+            if nome_img.startswith("http://") or nome_img.startswith("https://"):
+                lista_links.append(nome_img)
+            else:
+                lista_link = self.URL_BUSCA + nome_img
+                lista_links.append(lista_link)
 
         return lista_links
 
