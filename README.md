@@ -59,7 +59,6 @@ pytest -v tests/test_crawler.py
 Uma das dificuldades que tive, foi na obtenção das urls finais que contém as imagens. Pois a estratégia que eu havia traçado, eu estava pegando todos os atributos de href(`href="report.htm"`) e fazendo um `.replace('.htm', '.gif')`, esta forma "não estária correto", pois, não podemos confiar no nome da imagem como ser o nome do html, pois pode não ser igual. Pode não ser `.gif`. 
 Outra dificuldade que tive, foi em relação aos testes..
 Especificamente ao testar o método, `def _extrai_nome_imagens(self)`
-ao debugar mais a fundo o meu código de testes, percebi que o meu método, `def test_extrai_nome_imagens(self)` não estava me retornando a lista de nomes das imagens explo, não me retornava:`['report.gif', 'reallybig.gif', 'serial.gif', n... ]`
-
+ao debugar mais a fundo o meu código de testes, percebi que o meu método, `def test_extrai_nome_imagens(self)` não estava me retornando a lista de nomes das imagens explo, não me retornava:`['report.gif', 'reallybig.gif', 'serial.gif', n... ]`. como solução ultilizei Regex para parsear a lista de páginas html que o método recebe. 
 
 

@@ -1,0 +1,4 @@
+venv/
+imagens_gif/
+*/__pycache__/
+*.pyc
