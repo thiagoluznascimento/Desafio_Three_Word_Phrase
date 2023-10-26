@@ -1,113 +1,151 @@
 from unittest.mock import patch, Mock
 from unittest import TestCase
 
-import hashlib
 import os
-
-import requests
-from src.crawler import BucadorTHREEWORDPHRASE
+from src.crawler import BuscadorTheeWordPhrase
 
 
-class TestBucadorTHREEWORDPHRASE(TestCase):
+class TestBuscadorTheeWordPhrase(TestCase):
 
     def setUp(self):
-        self.instancia_crawler = BucadorTHREEWORDPHRASE('URL_BUSCA')
+        self.instancia_crawler = BuscadorTheeWordPhrase()
+        self.URL_BUSCA = "http://threewordphrase.com/archive.htm"        
+        self.URL_PRINCIPAL = "http://threewordphrase.com/"
 
-        self.url = "http://threewordphrase.com/"
-        self.link_archive = "http://threewordphrase.com//archive.htm"
-
-        with open('./tests/fixtures/resultado_da_busca.html') as arquivo:
-            self.pagina_resultado_busca = arquivo.read()
-        with open('./tests/fixtures/resultado_busca_archive.html') as arquivo:
-            self.pagina_resultado_busca_archive = arquivo.read()
-
-        self.urls_imagens = [
-            'http://threewordphrase.com//fatdog.htm', 'http://threewordphrase.com//gottabegood.htm',
-            'http://threewordphrase.com//cowboys2.htm', 'http://threewordphrase.com//cowboys1.htm'
+        self.urls_esperadas = [
+            'http://threewordphrase.com/report.htm', 'http://threewordphrase.com/reallybig.htm',
+            'http://threewordphrase.com/serial.htm', 'http://threewordphrase.com/explorer.htm', 
+            'http://threewordphrase.com/favor.htm', 'http://threewordphrase.com/nautical.htm',
+            'http://threewordphrase.com/planecrash.htm', 'http://threewordphrase.com/pressure.htm',
+            'http://threewordphrase.com/goneatya.htm'
         ]
 
-        # self.urls_imagens = self.instancia_crawler._extrai_url_imagens(self.pagina_resultado_busca_archive) #test_extrai_url_imagens
-        self.htmls = self.instancia_crawler._obtem_paginas_imagens(self.urls_imagens)
-        self.nomes_imagens = self.instancia_crawler._extrai_nome_imagens(self.htmls)
-        self.links_imagens = self.instancia_crawler._parser_nomes_imagens(self.nomes_imagens)
-        # self.nome_arquivo_esperado = self.instancia_crawler._obtem_md5(requests.get(link).content) + ".gif"
+        with open('./tests/fixtures/resultado_busca.html') as f:
+            self.pagina_resultado_busca = f.read()
 
-        if not os.path.exists('pasta_test_imagens_gif'):
-            os.makedirs('pasta_test_imagens_gif')
-            print('Pasta criada com sucesso!')
-            self.caminho_com_arquivos = os.path.join('pasta_test_imagens_gif')
+        self.paginas = []
+        with open('./tests/fixtures/paginas/pagina01.html', 'r') as f:
+            self.pagina01 = f.read()
+            self.paginas.append(self.pagina01)
+        with open('./tests/fixtures/paginas/pagina02.html', 'r') as f:
+            self.pagina02 = f.read()
+            self.paginas.append(self.pagina02)
+        with open('./tests/fixtures/paginas/pagina03.html', 'r') as f:
+            self.pagina03 = f.read()
+            self.paginas.append(self.pagina03)
+        with open('./tests/fixtures/pagina_nao_encontrada.html', 'r') as f:
+            self.pagina_nao_encontrada = f.read()     
 
-    def tearDown(self):
-        if os.path.exists('pasta_test_imagens_gif'):
-            for arquivo in os.listdir('pasta_test_imagens_gif'):
-                self.caminho_com_arquivos = os.path.join('pasta_test_imagens_gif', arquivo)
-                os.remove(self.caminho_com_arquivos)
-        os.rmdir('pasta_test_imagens_gif')
-
-    def test_busca_imagens(self):
+    def test__obtem_pagina_archive(self):
         with patch('requests.get', return_value=Mock(text=self.pagina_resultado_busca)) as mock_get:
-            html_obtido = self.instancia_crawler._busca_imagens()
-            self.assertEqual(self.pagina_resultado_busca, html_obtido, "Página diferente da esperada.")
-            mock_get.assert_called_once_with(self.url)
+            html_obtido = self.instancia_crawler._obtem_pagina_archive(self.URL_BUSCA)
+        self.assertEqual(self.pagina_resultado_busca, html_obtido, "Pagina diferente da esperada.")
+        self.assertEqual(mock_get.call_count, 1, "O numero de chamada é diferente do esperado.")
 
-    def test_parser_slug_archive(self):
-        link_esperado = self.link_archive
-        link_obtido = self.instancia_crawler._parser_slug_archive(self.pagina_resultado_busca)
-        self.assertEqual(link_esperado, link_obtido)
+    def test_lanca_exception_quando_pagina_archive_nao_encontrada(self):
+        with patch('requests.get') as mock_get:
+            mock_response = Mock()
+            mock_response.text = []
+            mock_response.raise_for_status.side_effect=Exception
+            mock_get.return_value=mock_response
+            self.assertEqual(self.instancia_crawler._obtem_pagina_archive(['conteudo_url']),[])
 
-    def test_obtem_html_archive(self):
-        link_archive_imagens = "http://threewordphrase.com//archive.htm"
-        with patch('requests.get', return_value=Mock(text=self.pagina_resultado_busca_archive)) as mock_get:
-            html_obtido = self.instancia_crawler._obtem_html_archive(link_archive_imagens)
-            self.assertEqual(self.pagina_resultado_busca_archive, html_obtido, "Pagina diferente da esperada.")
-            mock_get.assert_called_once_with(self.link_archive)
-
-    def test_extrai_url_imagens(self):
-        # urls_imagens = self.instancia_crawler._extrai_url_imagens(self.pagina_resultado_busca_archive)
-        self.assertIsInstance(self.urls_imagens, list)
-        self.assertGreater(len(self.urls_imagens), 0)
-        for url in self.urls_imagens:
-            self.assertTrue(url.startswith('http'))
-        for link in self.urls_imagens:
-            self.assertIn(link, self.urls_imagens, "Não existe essas URLs na fixture")
+    def test_extrai_url_imagens_da_pagina_archive(self):
+        urls_esperadas = [
+            'http://threewordphrase.com/report.htm', 'http://threewordphrase.com/reallybig.htm',
+            'http://threewordphrase.com/serial.htm', 'http://threewordphrase.com/explorer.htm', 
+            'http://threewordphrase.com/favor.htm', 'http://threewordphrase.com/nautical.htm',
+            'http://threewordphrase.com/planecrash.htm', 'http://threewordphrase.com/pressure.htm',
+            'http://threewordphrase.com/goneatya.htm'
+        ]
+        urls_obtidas = self.instancia_crawler._extrai_url_imagens(self.pagina_resultado_busca)
+        for url in urls_esperadas:
+            self.assertIn(url, urls_obtidas)
+        # import pdb; pdb.set_trace()
 
     def test_obtem_paginas_imagens(self):
-        # htmls = self.instancia_crawler._obtem_paginas_imagens(self.urls_imagens)
+        lista_mock = [
+            Mock(text=self.pagina01),
+            Mock(text=self.pagina02),
+            Mock(text=self.pagina03)
+        ]
+        lista_urls = [
+            'http://threewordphrase.com/report.htm', 'http://threewordphrase.com/reallybig.htm',
+            'http://threewordphrase.com/serial.htm'
+        ]
+        with patch('requests.get', side_effect=lista_mock) as mock_get:
+            htmls_obtidos = self.instancia_crawler._obtem_paginas_imagens(lista_urls)
+            htmls_esperados = self.paginas
+            self.assertEqual(htmls_esperados, htmls_obtidos)
+        self.assertEqual(mock_get.call_count, 3, "O numero de chamada é diferente do esperado")
 
-        self.assertIsInstance(self.htmls, list)
-        self.assertEqual(len(self.htmls), len(self.urls_imagens))
-        for html in self.htmls:
-            self.assertIsInstance(html, str)
+    def test_lanca_exception_quando_pagina_imagem_nao_encontrada(self):
+        with patch('requests.get') as mock_get:
+            obj_mock = Mock()
+            obj_mock.text = []
+            obj_mock.raise_for_status.side_effect=Exception
+            mock_get.return_value=obj_mock
+            self.assertEqual(self.instancia_crawler._obtem_paginas_imagens(['conteudo_url']),[])
+        
+    def test_extrai_links_imagens(self):
+        lista_links = [
+            'http://threewordphrase.com/report.gif', 'http://threewordphrase.com/reallybig.gif',
+            'http://threewordphrase.com/serial.gif'
+        ]
+        links_obtidos = self.instancia_crawler._extrai_links_imagens(self.paginas)
+        links_esperados = lista_links
+        # import pdb; pdb.set_trace()
+        self.assertEqual(links_obtidos, links_esperados)
+    
+    def test_baixa_imagens_tirinhas(self):
+        lista_mock = [
+            Mock(content=b'algum conteudo imagem'),
+            Mock(content=b'outro conteudo imagem')
+        ]
+        lista_links = [
+            'http://threewordphrase.com/report.gif', 'http://threewordphrase.com/reallybig.gif'
+        ]
+        # import pdb; pdb.set_trace()
 
-    def test_extrai_nome_imagens(self):
-        # lista_img_tag = self.instancia_crawler._extrai_nome_imagens(self.htmls)
-        for nome in self.nomes_imagens:
-            self.assertIsInstance(self.nomes_imagens, list)
-            self.assertEqual(len(self.nomes_imagens), len(self.htmls))
-            self.assertIsInstance(nome, str)
+        with patch('requests.get', side_effect=lista_mock) as mock_get:
+            self.instancia_crawler._baixa_imagens_tirinhas(lista_links)
+            self.assertEqual(mock_get.call_count, 2, "O numero de chamada é diferente do esperado")
 
-    def test_parser_nomes_imagens(self):
-        # links_imagens = self.instancia_crawler._parser_nomes_imagens(self.nomes_imagens)
-        for link in self.links_imagens:
-            self.assertIsInstance(self.links_imagens, list)
-            self.assertEqual(len(self.links_imagens), len(self.nomes_imagens))
-            self.assertIsInstance(link, str)
+        path_arquivo1 = './Imagens_Thee_Word_Phrase/report 6508dd5772207c1e56b173cf1679c71a.gif'
+        path_arquivo2 = './Imagens_Thee_Word_Phrase/reallybig 9417f7442247e132a527e0a8f4cd6966.gif'
+
+        with open(path_arquivo1, 'rb') as f:
+            self.assertEqual(f.read(), b'algum conteudo imagem')
+        os.remove(path_arquivo1)
+        with open(path_arquivo2, 'rb') as f:
+            self.assertEqual(f.read(), b'outro conteudo imagem')
+        os.remove(path_arquivo2)
+
+    def test_lanca_exception_quando_url_imagem_nao_e_encontrada(self):
+        with patch('requests.get') as mock_get:
+            obj_mock = Mock()
+            obj_mock.raise_for_status.side_effect=Exception
+            mock_get.return_value=obj_mock
+            self.assertIsNone(self.instancia_crawler._baixa_imagens_tirinhas(['conteudo_url_invalida']))
 
     def test_obtem_md5(self):
-        conteudo_imagem = b'conteudo_de_imagem_de_teste'
+        conteudo_imagem = b'algum conteudo imagem'
         hash_obtido = self.instancia_crawler._obtem_md5(conteudo_imagem)
-        md5_manual = hashlib.md5(conteudo_imagem).hexdigest()
-        self.assertEqual(hash_obtido, md5_manual)
+        hash_esperado = '6508dd5772207c1e56b173cf1679c71a'
+        self.assertEqual(hash_obtido, hash_esperado)
 
-    def test_baixa_arquivos_gif(self):
-        self.instancia_crawler._baixa_arquivos_gif(self.links_imagens)
+    def test_baixa_imagens(self):
+        lista_de_mocks = [
+            Mock(text=self.pagina_resultado_busca),
+            *[Mock(text=self.pagina01)] * 294,
+            *[Mock(content=b'algum conteudo imagem')] * 294
+        ]
 
-        for link in self.links_imagens:
-            nome_arquivo_esperado = self.instancia_crawler._obtem_md5(requests.get(link).content)
-            self.caminho_completo = os.path.join(self.caminho_com_arquivos, nome_arquivo_esperado)
-            if not os.path.exists(self.caminho_completo):
-                with open(self.caminho_com_arquivos + '/' + nome_arquivo_esperado, 'wb') as f:
-                    f.write(requests.get(link).content)
+        with patch('requests.get', side_effect=lista_de_mocks) as mock_get:
+            self.instancia_crawler.baixa_imagens()
+            self.assertEqual(mock_get.call_count, 589, "O numero de chamada é diferente do esperado")
 
-        self.assertTrue(os.path.exists('pasta_test_imagens_gif'))
-        self.assertTrue(os.path.exists(self.caminho_completo))
+        path_arquivo1 = './Imagens_Thee_Word_Phrase/report 6508dd5772207c1e56b173cf1679c71a.gif'
+        with open(path_arquivo1, 'rb') as f:
+            self.assertEqual(f.read(), b'algum conteudo imagem')
+        os.remove(path_arquivo1)

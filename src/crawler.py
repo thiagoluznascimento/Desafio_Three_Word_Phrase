@@ -1,63 +1,32 @@
 import logging
 import hashlib
 import os
-import re
 
 import requests
 from bs4 import BeautifulSoup
 
 
-class BucadorTHREEWORDPHRASE:
+class BuscadorTheeWordPhrase:
 
-    URL_BUSCA = "http://threewordphrase.com/"
+    URL_BUSCA = "http://threewordphrase.com/archive.htm"
+    URL_PRINCIPAL = "http://threewordphrase.com/"
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    def __init__(self, URL_BUSCA):
-        self.url = URL_BUSCA
-
     def baixa_imagens(self):
-        pagina_resultado_busca = self._busca_imagens()
-        link_archive_imagens = self._parser_slug_archive(pagina_resultado_busca)
-        pagina_resultado_busca_archive = self._obtem_html_archive(link_archive_imagens)
+        pagina_resultado_busca_archive = self._obtem_pagina_archive(self.URL_BUSCA)
         urls_imagens = self._extrai_url_imagens(pagina_resultado_busca_archive)
         lista_paginas_imagens = self._obtem_paginas_imagens(urls_imagens)
-        resultado_nomes_imagens = self._extrai_nome_imagens(lista_paginas_imagens)
-        links_imagens = self._parser_nomes_imagens(resultado_nomes_imagens)
-        self._baixa_arquivos_gif(links_imagens)
+        links_imagens = self._extrai_links_imagens(lista_paginas_imagens)
+        self._baixa_imagens_tirinhas(links_imagens)
         logging.info("Finalização do download das imagens!")
 
-    def _busca_imagens(self):
+    def _obtem_pagina_archive(self, URL_BUSCA):
         '''
-        Faz a requisição e retorna o resultado html em text da primeira página
-        '''
-        try:
-            response = requests.get(self.URL_BUSCA)
-            response.raise_for_status() # Verifica erros HTTP
-            logging.info("Iníciando buscas das imagens..")
-        except Exception as e:
-            logging.error(f'Ao buscar imagem - Erro: {str(e)}')
-
-        return response.text
-
-    def _parser_slug_archive(self, pagina_resultado_busca):
-        '''
-        Parsea pagina_resultado_busca etorna o link archive que contém os outros links das imgs
-        '''
-        soup = BeautifulSoup(pagina_resultado_busca, 'html.parser')
-        link = soup.find(href="/archive.htm")
-        slug = link.get('href')
-        url_archive = self.URL_BUSCA + slug
-
-        return url_archive
-
-    def _obtem_html_archive(self, link_archive_imagens):
-        '''
-        Faz a requisição e retorna a pág archive_imagens html em text
+        Faz requisição e retorna a pág archive html contendo todos os links de cada página
         '''
         try:
-            response = requests.get(link_archive_imagens)
+            response = requests.get(URL_BUSCA)
             response.raise_for_status()
-            # import pdb; pdb.set_trace()
             logging.info("Requisitando página archive..")
         except Exception as e:
             logging.error(f'Ao requsitar archive - Erro: {str(e)}')
@@ -66,77 +35,78 @@ class BucadorTHREEWORDPHRASE:
 
     def _extrai_url_imagens(self, pagina_resultado_busca_archive):
         '''
-        Parsea pagina_resultado_busca_archive e retorna a lista de urls que contém o html de cada imagem
+        Parsea pagina_archive e retorna a lista de urls
         '''
         lista_urls = []
         soup = BeautifulSoup(pagina_resultado_busca_archive, 'html.parser')
         spans_links = soup.select('span.links a')
         for link in spans_links:
-            slug = link.get('href')
-            url = self.URL_BUSCA + slug
-            if url:
-                lista_urls.append(url)
+            slug_completo = link.get('href')
+            slug = slug_completo.split("/")[-1]
+            url = self.URL_PRINCIPAL + slug
+            lista_urls.append(url)
 
         return lista_urls
 
     def _obtem_paginas_imagens(self, urls_imagens):
         '''
-        Parsea urls_imagens e retorna a lista de paginas html
+        Parsea urls_imagens e retorna a lista de paginas html de cada imagem
         '''
         lista_paginas = []
-        for url in urls_imagens:
+        for indice, url in enumerate(urls_imagens):
             try:
                 response = requests.get(url)
                 response.raise_for_status()
-                logging.info("Aguarde.. carregando páginas HTML")
+                logging.info(f"Aguarde.. carregando página HTML indice: {indice}")
                 lista_paginas.append(response.text)
             except Exception as e:
                 logging.error(f'Ao buscar página HTML - Erro: {str(e)}')
 
         return lista_paginas
 
-    def _extrai_nome_imagens(self, lista_paginas_imagens):
+    def _extrai_links_imagens(self, lista_paginas_imagens):
         '''
-        Parsea lista_paginas_imagens e retorna uma lista de nomes de cada imagem.gif
+        Parsea lista_paginas_imagens e retorna uma lista de links das imagens
         '''
         listas_img_tag = []
-        for pagina in lista_paginas_imagens:
-            # Usei um negative lookahead porque existia somente uma página que estava retorando a imagem /nextlink.jpg
-            img_src_values = re.findall(r' *(?:<td width=\"\d+\">| +)<img *src=\"(?!/nextlink)(.*?\.[a-z]{3} *)\"', pagina)
-            listas_img_tag.extend(img_src_values)
-
-        return listas_img_tag
-
-    def _parser_nomes_imagens(self, resultado_nomes_imagens):
-        '''
-        Parsea a lista resultado_nomes_imagens que contém os nomes das imagens e retorna lista_links das imagens
-        '''
         lista_links = []
-        for nome_img in resultado_nomes_imagens:
-            if nome_img.startswith("http://") or nome_img.startswith("https://"):
-                lista_links.append(nome_img)
-            else:
-                lista_link = self.URL_BUSCA + nome_img
-                lista_links.append(lista_link)
+        for pagina in lista_paginas_imagens:
+            soup = BeautifulSoup(pagina, 'html5lib')
+            tabela = soup.select_one('div[align="center"] > table + table')
+            imagens = tabela.find_all('img')
+            for imagem in imagens:
+                src = imagem.get('src')
+                nome_img = src.split("/")
+                listas_img_tag.append(nome_img[-1])
+        for nome_img in listas_img_tag:
+            link = self.URL_PRINCIPAL + nome_img
+            lista_links.append(link)
 
         return lista_links
 
-    def _baixa_arquivos_gif(self, links_imagens):
-        if not os.path.exists('imagens_gif'):
-            os.makedirs('imagens_gif')
+    def _baixa_imagens_tirinhas(self, links_imagens):
+        if not os.path.exists('Imagens_Thee_Word_Phrase'):
+            os.makedirs('Imagens_Thee_Word_Phrase')
             logging.info('Pasta criada com sucesso!')
         logging.info("Iníciando download das imagens..")
-        caminho_arquivo = os.path.join('imagens_gif')
+        caminho_arquivo = os.path.join('Imagens_Thee_Word_Phrase')
         for url_gif in links_imagens:
             try:
+                extensão_arquivo = url_gif.split(".")[-1]
+                nome = url_gif.split("/")[-1]
+                nome_sem_extensao = nome.split(".")[0]
                 response = requests.get(url_gif)
                 response.raise_for_status()
-                nome_arquivo = self._obtem_md5(response.content) + ".gif"
+                nome_hash = self._obtem_md5(response.content)
+                nome_arquivo = nome_sem_extensao + " " + nome_hash + "." + extensão_arquivo
                 caminho_completo = os.path.join(caminho_arquivo, nome_arquivo)
                 if not os.path.exists(caminho_completo):
                     with open(caminho_arquivo + '/' + nome_arquivo, 'wb') as f:
                         f.write(response.content)
-                        logging.info(f'Imagem com Hash-MD5: {nome_arquivo} salva com sucesso!')
+                        logging.info(
+                            f'Nome Da imagem: {nome_sem_extensao} com Hash-MD5: '
+                            f'{nome_hash} salva com sucesso!'
+                        )
                 else:
                     logging.info(f'Arquivo {nome_arquivo} já existe. Ignorando o download.')
             except Exception as e:
