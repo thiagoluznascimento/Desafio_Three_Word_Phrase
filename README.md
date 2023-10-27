@@ -30,25 +30,29 @@ git clone https://github.com/thiagoluznascimento/Desafio_Three_Word_Phrase.git
 ```bash
 virtualenv venv -p python3.7
 ```
+3. Comando para ativar o ambiente virtual
+```bash
+source venv/bin/activate  
+```
 
-3. Instale os requirements.txt
+4. Instale os requirements.txt
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Como executar o programa
-4. Comando para executar o projeto.
+5. Comando para executar o projeto.
 ```bash
 python run.py
 ```
 
 ## Como executar os testes
-5. Comando para executar os testes de modo verbose.
+6. Comando para executar os testes de modo verbose.
 ```bash
 pytest -v tests/test_crawler.py
 ```
 ## Execute o Flake8
-6. Comando para executar o flake8.
+7. Comando para executar o flake8.
 ```bash
 flake8 src/crawler.py   
 ```
