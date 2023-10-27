@@ -61,7 +61,6 @@ class TestBuscadorTheeWordPhrase(TestCase):
         urls_obtidas = self.instancia_crawler._extrai_url_imagens(self.pagina_resultado_busca)
         for url in urls_esperadas:
             self.assertIn(url, urls_obtidas)
-        # import pdb; pdb.set_trace()
 
     def test_obtem_paginas_imagens(self):
         lista_mock = [

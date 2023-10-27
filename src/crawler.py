@@ -92,13 +92,13 @@ class BuscadorTheeWordPhrase:
         caminho_arquivo = os.path.join('Imagens_Thee_Word_Phrase')
         for url_gif in links_imagens:
             try:
-                extensão_arquivo = url_gif.split(".")[-1]
-                nome = url_gif.split("/")[-1]
-                nome_sem_extensao = nome.split(".")[0]
                 response = requests.get(url_gif)
                 response.raise_for_status()
+                nome_imagem = url_gif.split("/")[-1]
+                nome_sem_extensao = nome_imagem.split(".")[0]
+                extensão = '.' + nome_imagem.split('.')[-1]
                 nome_hash = self._obtem_md5(response.content)
-                nome_arquivo = nome_sem_extensao + " " + nome_hash + "." + extensão_arquivo
+                nome_arquivo = '%s %s %s' % (nome_sem_extensao, nome_hash, extensão)
                 caminho_completo = os.path.join(caminho_arquivo, nome_arquivo)
                 if not os.path.exists(caminho_completo):
                     with open(caminho_arquivo + '/' + nome_arquivo, 'wb') as f:
