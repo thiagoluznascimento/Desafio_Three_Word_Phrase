@@ -1,5 +1,5 @@
-from src.crawler import BucadorTHREEWORDPHRASE
+from src.crawler import BuscadorTheeWordPhrase
 
 
-crawler = BucadorTHREEWORDPHRASE('URL_BUSCA')
+crawler = BuscadorTheeWordPhrase()
 crawler.baixa_imagens()
